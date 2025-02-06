@@ -1,43 +1,33 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import phonebookService from "./services/phonebook"; // Import the new module
 
 const App = () => {
   const [persons, setPersons] = useState([]);
   const [newName, setNewName] = useState("");
   const [newNumber, setNewNumber] = useState("");
 
-  // Fetch persons from the server on initial load
+  // Fetch persons from the backend when the component mounts
   useEffect(() => {
-    axios.get("http://localhost:3001/persons").then(response => {
-      setPersons(response.data);
+    phonebookService.getAll().then(initialPersons => {
+      setPersons(initialPersons);
     });
   }, []);
 
   const addPerson = (event) => {
     event.preventDefault();
 
-    // Prevent duplicate names
     if (persons.some(person => person.name === newName)) {
       alert(`${newName} is already added to the phonebook`);
       return;
     }
 
-    const newPerson = {
-      name: newName,
-      number: newNumber,
-    };
+    const newPerson = { name: newName, number: newNumber };
 
-    // Save to server
-    axios
-      .post("http://localhost:3001/persons", newPerson)
-      .then(response => {
-        setPersons(persons.concat(response.data)); // Update state with new person
-        setNewName(""); // Reset input fields
-        setNewNumber("");
-      })
-      .catch(error => {
-        console.error("Failed to save contact:", error);
-      });
+    phonebookService.create(newPerson).then(savedPerson => {
+      setPersons(persons.concat(savedPerson)); // Update state
+      setNewName("");
+      setNewNumber("");
+    });
   };
 
   return (
