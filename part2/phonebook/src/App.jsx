@@ -10,7 +10,7 @@ const App = () => {
   const [newName, setNewName] = useState("");
   const [newNumber, setNewNumber] = useState("");
   const [filter, setFilter] = useState("");
-  const [notification, setNotification] = useState(null);
+  const [notification, setNotification] = useState({ message: null, type: "" });
 
   // Fetch persons from the server on initial load
   useEffect(() => {
@@ -19,9 +19,9 @@ const App = () => {
     });
   }, []);
 
-  const showNotification = (message) => {
-    setNotification(message);
-    setTimeout(() => setNotification(null), 3000); // Hide after 3 seconds
+  const showNotification = (message, type = "success") => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification({ message: null, type: "" }), 3000); // Hide after 4 seconds
   };
 
   const addPerson = (event) => {
@@ -46,10 +46,15 @@ const App = () => {
             ));
             setNewName("");
             setNewNumber("");
-            showNotification(`Updated ${returnedPerson.name}'s number successfully!`);
+            showNotification(`Updated ${returnedPerson.name}'s number successfully!`, "success");
           })
           .catch(error => {
-            console.error("Failed to update contact:", error);
+            if (error.response && error.response.status === 404) {
+              showNotification(`Error: ${newName} was already deleted from the server.`, "error");
+              setPersons(persons.filter(p => p.id !== existingPerson.id)); // Remove the deleted person
+            } else {
+              console.error("Failed to update contact:", error);
+            }
           });
       }
       return;
@@ -62,7 +67,7 @@ const App = () => {
         setPersons(persons.concat(returnedPerson));
         setNewName("");
         setNewNumber("");
-        showNotification(`Added ${returnedPerson.name} to the phonebook!`);
+        showNotification(`Added ${returnedPerson.name} to the phonebook!`, "success");
       })
       .catch(error => {
         console.error("Failed to save contact:", error);
@@ -95,7 +100,7 @@ const App = () => {
     <div>
       <h2>Phonebook</h2>
   
-      <Notification message={notification} />
+      <Notification message={notification.message} type={notification.type} />
       <Filter filter={filter} setFilter={setFilter} />
 
       <h3>Add a new</h3>
