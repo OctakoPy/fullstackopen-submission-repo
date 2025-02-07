@@ -1,63 +1,94 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
-import PersonForm from './components/PersonForm';
-import Persons from './components/Persons';
-import Filter from './components/Filter';  // Import the new Filter component
+import Phonebook from "./services/Phonebook"; // our service module
+import PersonForm from "./components/PersonForm";
+import Persons from "./components/Persons";
+import Filter from "./components/Filter";
 
 const App = () => {
   const [persons, setPersons] = useState([]);
   const [newName, setNewName] = useState("");
   const [newNumber, setNewNumber] = useState("");
-  const [filter, setFilter] = useState(""); // Add a state for filter text
+  const [filter, setFilter] = useState("");
 
   // Fetch persons from the server on initial load
   useEffect(() => {
-    axios.get("http://localhost:3001/persons").then(response => {
-      setPersons(response.data);
+    Phonebook.getAll().then(initialPersons => {
+      setPersons(initialPersons);
     });
   }, []);
 
   const addPerson = (event) => {
     event.preventDefault();
-
-    // Prevent duplicate names
-    if (persons.some(person => person.name === newName)) {
-      alert(`${newName} is already added to the phonebook`);
+  
+    // Check if both fields are provided
+    if (!newName.trim() || !newNumber.trim()) {
+      alert("Both name and phone number are required.");
       return;
     }
-
-    const newPerson = {
-      name: newName,
-      number: newNumber,
-    };
-
-    // Save to server
-    axios
-      .post("http://localhost:3001/persons", newPerson)
-      .then(response => {
-        setPersons(persons.concat(response.data)); // Update state with new person
-        setNewName(""); // Reset input fields
+  
+    const existingPerson = persons.find(person => person.name === newName);
+  
+    if (existingPerson) {
+      if (window.confirm(`${newName} is already added to the phonebook. Replace the old number with the new one?`)) {
+        const updatedPerson = { ...existingPerson, number: newNumber };
+  
+        Phonebook.update(existingPerson.id, updatedPerson)
+          .then(returnedPerson => {
+            setPersons(persons.map(person => 
+              person.id !== existingPerson.id ? person : returnedPerson
+            ));
+            setNewName("");
+            setNewNumber("");
+          })
+          .catch(error => {
+            console.error("Failed to update contact:", error);
+          });
+      }
+      return;
+    }
+  
+    const newPerson = { name: newName, number: newNumber };
+  
+    Phonebook.create(newPerson)
+      .then(returnedPerson => {
+        setPersons(persons.concat(returnedPerson));
+        setNewName("");
         setNewNumber("");
       })
       .catch(error => {
         console.error("Failed to save contact:", error);
       });
   };
+  
 
   const handleDelete = (id) => {
-    setPersons(persons.filter((person) => person.id !== id)); // Remove the deleted person from the state
+    Phonebook.deletePerson(id)
+      .then(() => {
+        // Use a functional update to ensure the latest state is used.
+        setPersons(prevPersons => prevPersons.filter(person => person.id !== id));
+      })
+      .catch(error => {
+        // If the error is a 404, the resource is already gone; update the state anyway.
+        if (error.response && error.response.status === 404) {
+          setPersons(prevPersons => prevPersons.filter(person => person.id !== id));
+        } else {
+          console.error("Failed to delete contact:", error);
+        }
+      });
   };
+  
 
-  const filteredPersons = persons.filter(person => 
-    person.name.toLowerCase().includes(filter.toLowerCase())  // Filter persons based on name
+  const filteredPersons = persons.filter(person =>
+    person.name.toLowerCase().includes(filter.toLowerCase())
   );
 
   return (
     <div>
       <h2>Phonebook</h2>
 
-      <Filter filter={filter} setFilter={setFilter} />  {/* Include the filter component */}
+      <Filter filter={filter} setFilter={setFilter} />
 
+      <h3>Add a new</h3>
       <PersonForm
         newName={newName}
         setNewName={setNewName}
@@ -67,7 +98,7 @@ const App = () => {
       />
 
       <h3>Numbers</h3>
-      <Persons persons={filteredPersons} onDelete={handleDelete} /> {/* Use the filtered persons */}
+      <Persons persons={filteredPersons} onDelete={handleDelete} />
     </div>
   );
 };
