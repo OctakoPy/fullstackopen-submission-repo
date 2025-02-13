@@ -19,15 +19,28 @@ const Countries = ({ countries, query, selectedCountry, setSelectedCountry }) =>
   }
 
   return (
-    <ul>
-      {filtered.map(country => (
-        <li key={country.cca2}>
-          {country.name.common}
-          <button onClick={() => setSelectedCountry(country)}>Show</button>
-        </li>
-      ))}
+    <>
+      <table>
+        <thead>
+          <tr>
+            <th>Country</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filtered.map(country => (
+            <tr key={country.cca2}>
+              <td>{country.name.common}</td>
+              <td>
+                <button onClick={() => setSelectedCountry(country)}>Show</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
       {selectedCountry && <CountryDetails country={selectedCountry} />}
-    </ul>
+    </>
   );
 };
 
