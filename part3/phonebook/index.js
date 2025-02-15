@@ -1,7 +1,9 @@
 const express = require('express');
 const app = express();
 const morgan = require('morgan');
+const cors = require('cors');
 
+app.use(cors()); // Enable CORS for all routes
 app.use(express.json());
 
 morgan.token('post-data', (req) => {
@@ -42,7 +44,7 @@ app.post('/api/persons', (req, res) => {
     const newPerson = { id, name, number };
     persons = [...persons, newPerson];
   
-    res.status(201).json({ message: `Successfully added '${name}'` });
+    res.status(201).json(newPerson);
   });
   
 
